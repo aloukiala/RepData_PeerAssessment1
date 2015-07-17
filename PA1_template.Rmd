@@ -9,7 +9,7 @@ output:
 
 ## Loading and preprocessing the data
 
-Data that is used in this study represents activity monitoring device data, that is colleted in 5 minute intervals. The data contains date, interval and amount of steps recorded. Data is read from a csv file.
+Data that is used in this study represents activity monitoring device data, that is collected in 5 minute intervals. The data contains date, interval and amount of steps recorded. Data is read from a csv file.
 
 ```{r loadAndPreProcess}
 # setwd if needed
@@ -39,7 +39,7 @@ ggplot(steps, aes(stepCount)) + geom_histogram(binwidth=1000) +
     ggtitle("Histogram of steps taken on each day")
 ```
 
-The average steps taken each day is `r format(round(mean(steps$stepCount), 2), nsmall = 2)` and the median steps taken each day is `r format(round(median(steps$stepCount)))`. Both numbers are very close to each other. Average number of over 10000 steps a day is considered some sort of thershold for good fitness, but is under [depate](http://www.livescience.com/43956-walking-10000-steps-healthy.html).
+The average steps taken each day is `r format(round(mean(steps$stepCount), 2), nsmall = 2)` and the median steps taken each day is `r format(round(median(steps$stepCount)))`. Both numbers are very close to each other. Average number of over 10000 steps a day is considered some sort of threshold for good fitness, but is under [depate](http://www.livescience.com/43956-walking-10000-steps-healthy.html).
 
 ## What is the average daily activity pattern?
 
@@ -59,13 +59,13 @@ ggplot(timeSteps, aes(x=interval, y=stepCount)) + geom_line(size = 1) +
     ggtitle("Steps during day")
 ```
 
-The peak interval is `r strftime(filter(timeSteps, stepCount == max(stepCount))$interval, "%H:%M")`. This would indicate that people tend to move before they arrive to work (asumed that work day begins 9:00).
+The peak interval is `r strftime(filter(timeSteps, stepCount == max(stepCount))$interval, "%H:%M")`. This would indicate that people tend to move before they arrive to work (assumed that work day begins 9:00).
 
 ## Imputing missing values
 
 There are some missing values in the data and those are not used in the calculations above. There are total of `r sum(is.na(originaldata))` missing values in the data. This makes up `r format(round((sum(is.na(originaldata)) / nrow(originaldata)) * 100, 2), nsmall = 2)` % of the data. 
 
-Using the average of the interval to fill in the missing values. To do this, we simple take the interval, to which the missing value belongs to and assing it the average value of that interval. 
+Using the average of the interval to fill in the missing values. To do this, we simple take the interval, to which the missing value belongs to and assign it the average value of that interval. 
 
 ```{r generateMissingValues}
 # We need to look for the average steps in interval. Ingeter operation is 
@@ -110,4 +110,4 @@ ggplot(timeStepsWeekend, aes(x=interval, y=stepCount)) + geom_line(size = 1) +
 
 ```
 
-People tend to move more evenly during the day on weekends as for the week, the steps are taken before work. The main peak that is clearly seen during the week around 8:30 is alot more melow during the weekend.
+People tend to move more evenly during the day on weekends as for the week, the steps are taken before work. The main peak that is clearly seen during the week around 8:30 is a lot more mellow during the weekend.
