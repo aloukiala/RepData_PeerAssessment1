@@ -1,5 +1,6 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: "Antti Loukiala"
 output: 
   html_document:
     keep_md: true
@@ -8,18 +9,105 @@ output:
 
 ## Loading and preprocessing the data
 
+Data that is used in this study represents activity monitoring device data, that is colleted in 5 minute intervals. The data contains date, interval and amount of steps recorded. Data is read from a csv file.
+
+```{r loadAndPreProcess}
+# setwd if needed
+setwd("C:/Users/antti.loukiala/Documents/DataScience/RepData")
+# Read csv into data data.frame
+originaldata <- read.csv("activity.csv", header=T, 
+                 colClasses=c("integer", "Date", "integer"))
+# Remove the NA's. Not needed in the study
+data <- na.omit(originaldata)
+```
 
 
 ## What is mean total number of steps taken per day?
 
+We calculate the steps taken by each day by grouping the data into date. Now we can display the histogram of the steps taken on each day as shown below.
 
+```{r calculateSteps}
+# We will be using dplyr and ggplot2
+require(dplyr)
+require(ggplot2)
+# Group the data with the date
+steps <- data %>% group_by(date) %>% summarise(stepCount=sum(steps))
+# Display the data in a histogram
+ggplot(steps, aes(stepCount)) + geom_histogram(binwidth=1000) +
+    xlab("Steps taken per day (1000 bins)") +
+    ylab("Count") +
+    ggtitle("Histogram of steps taken on each day")
+```
+
+The average steps taken each day is `r format(round(mean(steps$stepCount), 2), nsmall = 2)` and the median steps taken each day is `r format(round(median(steps$stepCount)))`. Both numbers are very close to each other. Average number of over 10000 steps a day is considered some sort of thershold for good fitness, but is under [depate](http://www.livescience.com/43956-walking-10000-steps-healthy.html).
 
 ## What is the average daily activity pattern?
 
+Steps do not spread evenly during the day, which is logical. Below is shown graph of steps during the day.
 
+```{r intervalStudy}
+# Group by interval
+timeSteps <- data %>% group_by(interval) %>% summarise(stepCount=mean(steps))
+# Interval displays ugly. Covert it to timestamp.
+timeSteps$interval <- as.POSIXct(strptime((format(timeSteps$interval / 100, digits=4)), "%H.%M"))
+# Draw the daily plot. We need scales library to display time neat.
+require(scales)
+ggplot(timeSteps, aes(x=interval, y=stepCount)) + geom_line(size = 1) + 
+    scale_x_datetime(labels = date_format("%H:%M")) +
+    xlab("Time") + 
+    ylab("Mean steps per interval") + 
+    ggtitle("Steps during day")
+```
+
+The peak interval is `r strftime(filter(timeSteps, stepCount == max(stepCount))$interval, "%H:%M")`. This would indicate that people tend to move before they arrive to work (asumed that work day begins 9:00).
 
 ## Imputing missing values
 
+There are some missing values in the data and those are not used in the calculations above. There are total of `r sum(is.na(originaldata))` missing values in the data. This makes up `r format(round((sum(is.na(originaldata)) / nrow(originaldata)) * 100, 2), nsmall = 2)` % of the data. 
 
+Using the average of the interval to fill in the missing values. To do this, we simple take the interval, to which the missing value belongs to and assing it the average value of that interval. 
+
+```{r generateMissingValues}
+# We need to look for the average steps in interval. Ingeter operation is 
+# more usefull so we create the timeSteps again.
+timeSteps <- data %>% group_by(interval) %>% summarise(stepCount=mean(steps))
+# Go trough all the originaldata and substitue NA values with the average
+filleddata <- originaldata
+for (i in 1:nrow(filleddata) ) {
+    if(is.na(filleddata[i,1])) {
+        filleddata[i,1] <- 
+            timeSteps[timeSteps$interval==filleddata[i,3],]$stepCount
+    }
+}
+stepsNAFilled <- filleddata %>% group_by(date) %>% summarise(stepCount=sum(steps))
+ggplot(stepsNAFilled, aes(stepCount)) + geom_histogram(binwidth=1000) +
+    xlab("Steps taken per day (1000 bins)") +
+    ylab("Count") +
+    ggtitle("Histogram of steps taken on each day where NA's are filled")
+```
+
+With the NA's filled, the average steps taken each day is `r format(round(mean(stepsNAFilled$stepCount), 2), nsmall = 2)` and the median steps taken each day is `r format(round(median(stepsNAFilled$stepCount)))`. Filling the NA values with the interval average doesn't change the mean or median significantly. They have bigger impact on 2nd and 3th quantiles.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Activity between week and weekend differs slightly. Below is shown a graph from which the difference can be seen.
+
+```{r weekendVSweek}
+# Use mutate to indicate weekend
+filleddata <- mutate(filleddata, weekend = ifelse(strftime(filleddata$date, '%u') < 6, "week", "weekend"))
+
+timeStepsWeekend <- filleddata %>% group_by(interval, weekend) %>% summarise(stepCount=mean(steps))
+# Interval displays ugly. Covert it to timestamp.
+timeStepsWeekend$interval <- as.POSIXct(strptime((format(timeStepsWeekend$interval / 100, digits=4)), "%H.%M"))
+# Draw the daily plot. We need scales library to display time neet.
+require(scales)
+ggplot(timeStepsWeekend, aes(x=interval, y=stepCount)) + geom_line(size = 1) + 
+    scale_x_datetime(labels = date_format("%H:%M")) +
+    xlab("Time") + 
+    ylab("Mean steps per interval") + 
+    ggtitle("Week and weekend comparinson of steps during day") +
+    facet_grid(weekend~.)
+
+```
+
+People tend to move more evenly during the day on weekends as for the week, the steps are taken before work. The main peak that is clearly seen during the week around 8:30 is alot more melow during the weekend.
